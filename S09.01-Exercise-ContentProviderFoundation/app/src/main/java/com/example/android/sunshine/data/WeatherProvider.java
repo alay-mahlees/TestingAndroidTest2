@@ -82,7 +82,7 @@ public class WeatherProvider extends ContentProvider {
      * @param values An array of sets of column_name/value pairs to add to the database.
      *               This must not be {@code null}.
      *
-     * @return The number of values that were inserted.
+     * @return The number of values that were inserted
      */
     @Override
     public int bulkInsert(@NonNull Uri uri, @NonNull ContentValues[] values) {
