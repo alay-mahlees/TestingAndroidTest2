@@ -18,9 +18,13 @@ package com.example.android.sunshine.data;
 import android.annotation.TargetApi;
 import android.content.ContentProvider;
 import android.content.ContentValues;
+import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.os.CancellationSignal;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 /**
  * This class serves as the ContentProvider for all of Sunshine's data. This class allows us to
@@ -34,21 +38,37 @@ import android.support.annotation.NonNull;
  */
 public class WeatherProvider extends ContentProvider {
 
-//  TODO (5) Create static constant integer values named CODE_WEATHER & CODE_WEATHER_WITH_DATE to identify the URIs this ContentProvider can handle
+    public final static int  CODE_WEATHER = 100;
+    public final static int CODE_WEATHER_WITH_DATE = 101;
 
-//  TODO (7) Instantiate a static UriMatcher using the buildUriMatcher method
 
+
+    private static final UriMatcher sUriMatcher = buildUriMatcher();
     WeatherDbHelper mOpenHelper;
 
-//  TODO (6) Write a method called buildUriMatcher where you match URI's to their numeric ID
 
-//  TODO (1) Implement onCreate
+    public static UriMatcher buildUriMatcher(){
+
+
+        final UriMatcher uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+        String authority = WeatherContract.CONTENT_AUTHORITY;
+
+
+        uriMatcher.addURI(authority, WeatherContract.PATH_WEATHER, CODE_WEATHER);
+
+        uriMatcher.addURI(authority, WeatherContract.PATH_WEATHER + "#", CODE_WEATHER_WITH_DATE);
+
+
+
+
+
+        return uriMatcher;
+    }
+
     @Override
     public boolean onCreate() {
-//      TODO (2) Within onCreate, instantiate our mOpenHelper
-
-//      TODO (3) Return true from onCreate to signify success performing setup
-        return false;
+        mOpenHelper = new WeatherDbHelper(getContext());
+        return true;
     }
 
     /**
@@ -70,6 +90,62 @@ public class WeatherProvider extends ContentProvider {
     }
 
 //  TODO (8) Provide an implementation for the query method
+
+    SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+
+    @Nullable
+    @Override
+    public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection,
+                        @Nullable String[] selectionArgs, @Nullable String sortOrder,
+                        @Nullable CancellationSignal cancellationSignal) {
+
+        Cursor cursor;
+
+        int matcher = sUriMatcher.match(uri);
+
+        switch (matcher){
+            case CODE_WEATHER:
+
+                cursor = mOpenHelper.getReadableDatabase().query(WeatherContract.WeatherEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder);
+
+                break;
+
+            case CODE_WEATHER_WITH_DATE:
+
+
+                String Normalize = uri.getLastPathSegment();
+
+                selection = " = ?";
+
+                selectionArgs = new String[]{Normalize};
+
+                cursor = mOpenHelper.getReadableDatabase().query(WeatherContract.WeatherEntry.TABLE_NAME,
+                        projection,
+                        WeatherContract.WeatherEntry.COLUMN_DATE + selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder);
+
+                break;
+
+                default:
+                    throw new UnsupportedOperationException("no uri:" + uri);
+        }
+
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+
+
+
+        return cursor;
+    }
+
     /**
      * Handles query requests from clients. We will use this method in Sunshine to query for all
      * of our weather data as well as to query for the weather on a particular day.
